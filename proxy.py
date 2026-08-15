@@ -8,9 +8,13 @@ This bridges the two. See docs/adr/0001.
 """
 
 import json
+import sys
 import threading
 import time
+import urllib.error
 import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlparse
 
 
 class AKeylessClient:
@@ -88,3 +92,52 @@ class AKeylessClient:
         with self._secret_lock:
             self._secrets[name] = (data, self._clock() + self._secret_ttl)
         return data
+
+
+class ProxyServer(ThreadingHTTPServer):
+    # Python's default listen backlog is 5. doco-cd bursts 20-40 secret
+    # fetches in a second during a deploy, overflowing the accept queue so
+    # the kernel RSTs the excess and the deploy fails on "connection reset
+    # by peer". Measured: ListenOverflows=5667 in 10.5h. See docs/adr/0003.
+    request_queue_size = 128
+    daemon_threads = True
+    allow_reuse_address = True
+
+
+def make_handler(client, keepalive=False):
+    """Build a handler bound to `client`. keepalive per docs/adr/0003."""
+
+    class AKeylessProxyHandler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1" if keepalive else "HTTP/1.0"
+        timeout = 30 if keepalive else None
+
+        def _send(self, code, body):
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            parsed = urlparse(self.path)
+            if parsed.path != "/secret":
+                self._send(404, b'{"error": "not found"}')
+                return
+
+            name = parse_qs(parsed.query).get("name", [None])[0]
+            if not name:
+                self._send(400, b'{"error": "missing name query parameter"}')
+                return
+
+            try:
+                self._send(200, json.dumps(client.get_secret(name)).encode())
+            except urllib.error.HTTPError as e:
+                self._send(e.code, e.read())
+            except Exception as e:  # noqa: BLE001 - surface any failure as 500
+                self._send(500, json.dumps({"error": str(e)}).encode())
+
+        def log_message(self, fmt, *args):
+            sys.stdout.write(f"[{self.log_date_time_string()}] {fmt % args}\n")
+            sys.stdout.flush()
+
+    return AKeylessProxyHandler
