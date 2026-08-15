@@ -975,13 +975,13 @@ Expected: one run, `Publish` skipped.
 
 ---
 
-### Task 9: Release v1.0.0
+### Task 9: Release v0.0.1
 
 **Files:** none — this task produces an artefact, not a commit.
 
 **Interfaces:**
 - Consumes: everything above.
-- Produces: `ghcr.io/tscibilia/akeyless-proxy:1.0.0@sha256:<digest>`, the string Phase 2 pins.
+- Produces: `ghcr.io/tscibilia/akeyless-proxy:0.0.1@sha256:<digest>`, the string Phase 2 pins.
 
 - [ ] **Step 1: Create the GitHub repository and push** *(human step — needs an authenticated account)*
 
@@ -992,8 +992,8 @@ gh repo create tscibilia/akeyless-proxy --public --source=. --remote=origin --pu
 - [ ] **Step 2: Tag and push the tag**
 
 ```bash
-git tag -a v1.0.0 -m "Initial release: extracted from home-ops"
-git push origin v1.0.0
+git tag -a v0.0.1 -m "Initial release: extracted from home-ops"
+git push origin v0.0.1
 ```
 
 - [ ] **Step 3: Wait for the publish job and capture the digest**
@@ -1013,7 +1013,7 @@ Verify anonymously:
 
 ```bash
 docker logout ghcr.io
-docker pull ghcr.io/tscibilia/akeyless-proxy:1.0.0
+docker pull ghcr.io/tscibilia/akeyless-proxy:0.0.1
 ```
 
 Expected: pull succeeds with no credentials. Per ADR-0004.
@@ -1044,7 +1044,7 @@ In `docker/vps/.doco-cd/docker-compose.app.yaml`, replace the `akeyless-proxy` s
 
 ```yaml
   akeyless-proxy:
-    image: ghcr.io/tscibilia/akeyless-proxy:1.0.0@sha256:<DIGEST>
+    image: ghcr.io/tscibilia/akeyless-proxy:0.0.1@sha256:<DIGEST>
     container_name: akeyless-proxy
     restart: unless-stopped
     expose:
@@ -1149,7 +1149,7 @@ For each of `truenas` and `clonenas`, replace the `akeyless-proxy` service:
 
 ```yaml
   akeyless-proxy:
-    image: ghcr.io/tscibilia/akeyless-proxy:1.0.0@sha256:<DIGEST>
+    image: ghcr.io/tscibilia/akeyless-proxy:0.0.1@sha256:<DIGEST>
     container_name: akeyless-proxy
     restart: unless-stopped
     networks:

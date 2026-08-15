@@ -16,7 +16,7 @@ Python 3.14, standard library only, no dependencies.
 ```yaml
 services:
   akeyless-proxy:
-    image: ghcr.io/tscibilia/akeyless-proxy:1.0.0@sha256:<digest>
+    image: ghcr.io/tscibilia/akeyless-proxy:0.0.1@sha256:<digest>
     container_name: akeyless-proxy
     restart: unless-stopped
     expose: ["8080"]

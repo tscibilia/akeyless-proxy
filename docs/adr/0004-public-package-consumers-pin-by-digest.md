@@ -6,7 +6,7 @@
 The image is published as a public package, and consumers reference it by immutable digest rather than by a moving tag:
 
 ```yaml
-image: ghcr.io/tscibilia/akeyless-proxy:1.0.0@sha256:<digest>
+image: ghcr.io/tscibilia/akeyless-proxy:0.0.1@sha256:<digest>
 ```
 
 ## Considered options
