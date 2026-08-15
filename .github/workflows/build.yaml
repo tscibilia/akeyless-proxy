@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      packages: write # required to push the image to ghcr.io
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5.1.0
@@ -70,8 +70,14 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Report digest
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+          REF: ${{ github.ref_name }}
+          DIGEST: ${{ steps.push.outputs.digest }}
         run: |
-          echo "### Pin this digest in consumers" >> "$GITHUB_STEP_SUMMARY"
-          echo '```yaml' >> "$GITHUB_STEP_SUMMARY"
-          echo "image: ghcr.io/${{ github.repository }}:${{ github.ref_name }}@${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Pin this digest in consumers"
+            echo '```yaml'
+            echo "image: ${IMAGE}:${REF}@${DIGEST}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
