@@ -61,12 +61,14 @@ class TestHandler(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as cm:
             urllib.request.urlopen(h.url("/secret"))
         self.assertEqual(cm.exception.code, 400)
+        cm.exception.close()
 
     def test_unknown_path_is_404(self):
         h = self.make(StubClient())
         with self.assertRaises(urllib.error.HTTPError) as cm:
             urllib.request.urlopen(h.url("/nope"))
         self.assertEqual(cm.exception.code, 404)
+        cm.exception.close()
 
     def test_upstream_http_error_status_is_passed_through(self):
         err = urllib.error.HTTPError(
@@ -76,12 +78,14 @@ class TestHandler(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as cm:
             urllib.request.urlopen(h.url("/secret?name=/a"))
         self.assertEqual(cm.exception.code, 403)
+        cm.exception.close()
 
     def test_unexpected_error_is_500(self):
         h = self.make(StubClient(error=RuntimeError("boom")))
         with self.assertRaises(urllib.error.HTTPError) as cm:
             urllib.request.urlopen(h.url("/secret?name=/a"))
         self.assertEqual(cm.exception.code, 500)
+        cm.exception.close()
 
     def test_content_length_is_always_present(self):
         h = self.make(StubClient({"/a": "v"}))
