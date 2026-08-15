@@ -49,15 +49,22 @@ class AKeylessClient:
             return json.loads(resp.read())
 
     def get_token(self):
-        data = self._post(
-            "/auth",
-            {
-                "access-id": self._access_id,
-                "access-key": self._access_key,
-                "access-type": "access_key",
-            },
-        )
-        token = data.get("token")
-        if not token:
-            raise ValueError("no token in aKeyless auth response")
-        return token
+        with self._token_lock:
+            if self._token and self._clock() < self._token_expiry:
+                return self._token
+
+            data = self._post(
+                "/auth",
+                {
+                    "access-id": self._access_id,
+                    "access-key": self._access_key,
+                    "access-type": "access_key",
+                },
+            )
+            token = data.get("token")
+            if not token:
+                raise ValueError("no token in aKeyless auth response")
+
+            self._token = token
+            self._token_expiry = self._clock() + self._token_ttl
+            return token

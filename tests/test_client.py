@@ -52,5 +52,60 @@ class TestGetToken(unittest.TestCase):
             client.get_token()
 
 
+class FakeClock:
+    def __init__(self):
+        self.now = 1000.0
+
+    def __call__(self):
+        return self.now
+
+    def advance(self, seconds):
+        self.now += seconds
+
+
+class TestTokenCache(unittest.TestCase):
+    def test_second_call_reuses_the_cached_token(self):
+        opener = FakeOpener([{"token": "t-1"}, {"token": "t-2"}])
+        client = AKeylessClient("p-id", "key", opener=opener, clock=FakeClock())
+
+        self.assertEqual(client.get_token(), "t-1")
+        self.assertEqual(client.get_token(), "t-1")
+        self.assertEqual(len(opener.requests), 1)
+
+    def test_token_is_refetched_after_ttl(self):
+        clock = FakeClock()
+        opener = FakeOpener([{"token": "t-1"}, {"token": "t-2"}])
+        client = AKeylessClient(
+            "p-id", "key", token_ttl=3000, opener=opener, clock=clock
+        )
+
+        self.assertEqual(client.get_token(), "t-1")
+        clock.advance(3001)
+        self.assertEqual(client.get_token(), "t-2")
+        self.assertEqual(len(opener.requests), 2)
+
+    def test_concurrent_callers_mint_one_token(self):
+        import threading as _t
+
+        opener = FakeOpener([{"token": "t-1"}] + [{"token": "extra"}] * 8)
+        client = AKeylessClient("p-id", "key", opener=opener, clock=FakeClock())
+
+        start = _t.Barrier(8)
+        seen = []
+
+        def worker():
+            start.wait()
+            seen.append(client.get_token())
+
+        threads = [_t.Thread(target=worker) for _ in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        self.assertEqual(set(seen), {"t-1"})
+        self.assertEqual(len(opener.requests), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
