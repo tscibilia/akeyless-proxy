@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    [
+      "@eleboucher/opencode-memini@0.7.1",
+      {
+        "namespace": "tscibilia/akeyless-proxy",
+        "base_url": "https://memini.t0m.co/",
+        "recall_budget_ms": 8000
+      }
+    ]
+  ]
+}
