@@ -1,0 +1,10 @@
+.git
+.github
+.agents
+.opencode
+docs
+tests
+README.md
+AGENTS.md
+CLAUDE.md
+__pycache__
