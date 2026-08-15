@@ -1,0 +1,27 @@
+# Secrets
+*.env
+*.iso
+*.crt
+*.pub
+*.key
+*.decrypted~*.yaml
+/github-deploy.key
+/github-deploy.key.pub
+/github-push-token.txt
+
+# AI Agents
+.claude/
+# convenience symlink -> docs/superpowers
+.superpowers
+# transient superpowers state; plans/ and specs/ are tracked
+docs/superpowers/worktrees/
+docs/superpowers/sdd/
+
+# Private
+.git/
+.private/
+.scratch/
+mise.lock
+
+# Python
+__pycache__/
