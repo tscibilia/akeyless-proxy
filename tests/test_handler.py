@@ -93,5 +93,32 @@ class TestHandler(unittest.TestCase):
             self.assertIsNotNone(r.headers["Content-Length"])
 
 
+class TestKeepAlive(unittest.TestCase):
+    def test_default_is_http_1_0_and_closes(self):
+        handler = make_handler(StubClient(), keepalive=False)
+        self.assertEqual(handler.protocol_version, "HTTP/1.0")
+        self.assertIsNone(handler.timeout)
+
+    def test_opt_in_selects_http_1_1_with_idle_timeout(self):
+        handler = make_handler(StubClient(), keepalive=True)
+        self.assertEqual(handler.protocol_version, "HTTP/1.1")
+        self.assertEqual(handler.timeout, 30)
+
+    def test_keepalive_server_advertises_a_persistent_connection(self):
+        harness = ServerHarness(StubClient({"/a": "v"}), keepalive=True)
+        self.addCleanup(harness.close)
+        with urllib.request.urlopen(harness.url("/secret?name=/a")) as r:
+            self.assertEqual(r.version, 11)
+            self.assertNotEqual(
+                (r.headers["Connection"] or "").lower(), "close"
+            )
+
+    def test_default_server_reports_http_1_0(self):
+        harness = ServerHarness(StubClient({"/a": "v"}), keepalive=False)
+        self.addCleanup(harness.close)
+        with urllib.request.urlopen(harness.url("/secret?name=/a")) as r:
+            self.assertEqual(r.version, 10)
+
+
 if __name__ == "__main__":
     unittest.main()
