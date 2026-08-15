@@ -38,6 +38,9 @@ class AKeylessClient:
         self._token_expiry = 0.0
         self._token_lock = threading.Lock()
 
+        self._secrets = {}
+        self._secret_lock = threading.Lock()
+
     def _post(self, path, payload):
         req = urllib.request.Request(
             f"{self._api_url}{path}",
@@ -68,3 +71,20 @@ class AKeylessClient:
             self._token = token
             self._token_expiry = self._clock() + self._token_ttl
             return token
+
+    def get_secret(self, name):
+        with self._secret_lock:
+            entry = self._secrets.get(name)
+            if entry and self._clock() < entry[1]:
+                return entry[0]
+
+        # Deliberately outside the lock: a slow upstream call must not block
+        # lookups of other names. A duplicate in-flight fetch is cheaper than
+        # serialising every deploy through one mutex.
+        data = self._post(
+            "/get-secret-value", {"names": [name], "token": self.get_token()}
+        )
+
+        with self._secret_lock:
+            self._secrets[name] = (data, self._clock() + self._secret_ttl)
+        return data

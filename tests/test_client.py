@@ -107,5 +107,49 @@ class TestTokenCache(unittest.TestCase):
         self.assertEqual(len(opener.requests), 1)
 
 
+class TestGetSecret(unittest.TestCase):
+    def test_posts_name_and_token_then_returns_body_unmodified(self):
+        opener = FakeOpener([{"token": "t-1"}, {"/a/b": "value"}])
+        client = AKeylessClient("p-id", "key", opener=opener, clock=FakeClock())
+
+        self.assertEqual(client.get_secret("/a/b"), {"/a/b": "value"})
+
+        secret_req = opener.requests[1]
+        self.assertEqual(
+            secret_req.full_url, "https://api.akeyless.io/get-secret-value"
+        )
+        body = json.loads(secret_req.data)
+        self.assertEqual(body["names"], ["/a/b"])
+        self.assertEqual(body["token"], "t-1")
+
+    def test_repeat_name_is_served_from_cache(self):
+        opener = FakeOpener([{"token": "t-1"}, {"/a/b": "v"}, {"/a/b": "other"}])
+        client = AKeylessClient("p-id", "key", opener=opener, clock=FakeClock())
+
+        self.assertEqual(client.get_secret("/a/b"), {"/a/b": "v"})
+        self.assertEqual(client.get_secret("/a/b"), {"/a/b": "v"})
+        self.assertEqual(len(opener.requests), 2)  # 1 auth + 1 secret
+
+    def test_secret_is_refetched_after_ttl(self):
+        clock = FakeClock()
+        opener = FakeOpener([{"token": "t-1"}, {"/a/b": "v"}, {"/a/b": "v2"}])
+        client = AKeylessClient(
+            "p-id", "key", secret_ttl=300, opener=opener, clock=clock
+        )
+
+        self.assertEqual(client.get_secret("/a/b"), {"/a/b": "v"})
+        clock.advance(301)
+        self.assertEqual(client.get_secret("/a/b"), {"/a/b": "v2"})
+
+    def test_distinct_names_are_cached_separately(self):
+        opener = FakeOpener([{"token": "t-1"}, {"/a": "1"}, {"/b": "2"}])
+        client = AKeylessClient("p-id", "key", opener=opener, clock=FakeClock())
+
+        self.assertEqual(client.get_secret("/a"), {"/a": "1"})
+        self.assertEqual(client.get_secret("/b"), {"/b": "2"})
+        self.assertEqual(client.get_secret("/a"), {"/a": "1"})
+        self.assertEqual(len(opener.requests), 3)
+
+
 if __name__ == "__main__":
     unittest.main()
