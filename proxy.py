@@ -8,6 +8,7 @@ This bridges the two. See docs/adr/0001.
 """
 
 import json
+import os
 import sys
 import threading
 import time
@@ -141,3 +142,50 @@ def make_handler(client, keepalive=False):
             sys.stdout.flush()
 
     return AKeylessProxyHandler
+
+
+def read_credential(env, name):
+    """Value of `name`, else the contents of the path in `name`_FILE."""
+    direct = env.get(name)
+    if direct:
+        return direct
+    path = env.get(f"{name}_FILE")
+    if path:
+        with open(path) as fh:
+            return fh.read().strip()
+    return None
+
+
+def main(argv=None, env=None):
+    env = os.environ if env is None else env
+
+    access_id = read_credential(env, "AKEYLESS_ACCESS_ID")
+    access_key = read_credential(env, "AKEYLESS_ACCESS_KEY")
+    if not access_id or not access_key:
+        print(
+            "error: AKEYLESS_ACCESS_ID and AKEYLESS_ACCESS_KEY must be set "
+            "(or their _FILE variants)",
+            file=sys.stderr,
+        )
+        return 1
+
+    keepalive = env.get("PROXY_KEEPALIVE", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+    client = AKeylessClient(access_id, access_key)
+    server = ProxyServer(("0.0.0.0", 8080), make_handler(client, keepalive))
+    print(
+        f"aKeyless proxy listening on http://0.0.0.0:8080 "
+        f"(keepalive={'on' if keepalive else 'off'})",
+        file=sys.stderr,
+    )
+    server.serve_forever()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
