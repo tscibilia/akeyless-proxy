@@ -62,6 +62,26 @@
       "op item get*--reveal*": "deny"
     }
   },
+  "mcp": {
+    "litellm-homelab": {
+      "type": "remote",
+      "url": "https://litellm.t0m.co/mcp/",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer {env:LITELLM_API_KEY}",
+        "x-mcp-servers": "context7_mcp,searxng_mcp,github_mcp,deepwiki_mcp"
+      }
+    },
+    "memini": {
+      "type": "remote",
+      "url": "https://memini.t0m.co/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer {env:MEMINI_API_KEY}",
+        "X-Memini-Namespace": "tscibilia/akeyless-proxy"
+      }
+    }
+  },
   "plugins": [
     {
       "package": "@eleboucher/opencode-memini-v2",
